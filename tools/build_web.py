@@ -105,8 +105,13 @@ def assemble():
 
 
 if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--version", default="dev", help="app version stamped into the build (the update check compares it)")
+    args = parser.parse_args()
     print(f"Assembling {WWW.name}/ from app/ + shared data code")
     assemble()
+    (WWW / "js" / "version.js").write_text(f"window.APP_VERSION = '{args.version}';\n", encoding="utf-8")
     print("Bundling libraries and fonts")
     vendor()
     size = sum(f.stat().st_size for f in WWW.rglob("*") if f.is_file()) / 1048576

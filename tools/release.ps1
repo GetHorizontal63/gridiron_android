@@ -23,7 +23,7 @@ $parts = $Version.Split('.') | ForEach-Object { [int]$_ }
 $code = $parts[0] * 10000 + $parts[1] * 100 + $parts[2]
 
 Write-Host "Building Grass Touchers $Version (code $code)"
-python tools/build_web.py
+python tools/build_web.py --version $Version
 if ($LASTEXITCODE) { throw 'build_web.py failed' }
 $node = (Get-Command node -ErrorAction SilentlyContinue).Source
 if (-not $node) { $node = Join-Path $env:ProgramFiles 'nodejs\node.exe' }   # Node's default install folder

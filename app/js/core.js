@@ -1,7 +1,7 @@
 /* App core: the small SITE helper the shared data modules expect, the screen router, and the app bar / tab bar.
    League data is read live from the published site (DATA_BASE); everything else ships inside the app. */
 (function () {
-    const DATA_BASE = 'https://gethorizontal63.github.io/gridiron_web/';
+    const DATA_BASE = 'https://grasstouchers.football/';           // the league site (GitHub Pages, custom domain)
     window.LEAGUE_DB_URL = DATA_BASE + 'data/league.db';                 // read by league-db.js
 
     const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -98,7 +98,38 @@
             ${d.auto ? `<div class="st-legend">${d.playin ? `1–${d.auto} bye · ${d.auto + 1}–${d.auto + d.playin} play-in · ${d.auto + d.playin + 1}+ Gulag` : `Top ${d.auto} make the playoffs`}</div>` : ''}`;
     }
 
+    // ---------------------------------------------------------------- update check: newest release on GitHub vs this build
+    const DOWNLOAD_PAGE = 'https://grasstouchers.football/pages/app.html';
+    const newer = (a, b) => { const x = String(a).split('.').map(Number), y = String(b).split('.').map(Number);
+        for (let i = 0; i < 3; i++) { if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); } return false; };
+    async function checkUpdate(force = false) {
+        const mine = window.APP_VERSION;
+        if (!mine || mine === 'dev') return { status: 'dev' };
+        try {
+            const r = await fetch('https://api.github.com/repos/GetHorizontal63/gridiron_android/releases/latest', { headers: { Accept: 'application/vnd.github+json' } });
+            if (!r.ok) return { status: 'error' };
+            const latest = (await r.json()).tag_name.replace(/^v/, '');
+            if (!newer(latest, mine)) return { status: 'current', latest };
+            let dismissed = null; try { dismissed = localStorage.getItem('gt-update-dismissed'); } catch (_) { /* private mode */ }
+            if (force || dismissed !== latest) showUpdate(latest);
+            return { status: 'update', latest };
+        } catch (_) { return { status: 'error' }; }
+    }
+    function showUpdate(latest) {
+        if (document.getElementById('update-bar')) return;
+        const bar = document.createElement('div');
+        bar.id = 'update-bar'; bar.className = 'update-bar';
+        bar.innerHTML = `<a href="${DOWNLOAD_PAGE}" target="_blank" rel="noopener"><b>Update available</b><span>Version ${esc(latest)} · tap to download</span></a>
+            <button aria-label="Dismiss">×</button>`;
+        bar.querySelector('button').addEventListener('click', () => {
+            try { localStorage.setItem('gt-update-dismissed', latest); } catch (_) { /* private mode */ }
+            bar.remove(); document.body.classList.remove('has-update');
+        });
+        document.body.appendChild(bar); document.body.classList.add('has-update');
+    }
+
     window.APP = {
+        checkUpdate, version: () => window.APP_VERSION || 'dev', downloadPage: DOWNLOAD_PAGE,
         esc, icon, url, seg, bindSeg, replaceLinks, seasons, seasonChips, standingsRows,
         screen: (name, def) => { screens[name] = def; },
         screenDef: name => screens[name],

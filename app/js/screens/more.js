@@ -19,9 +19,22 @@
             </div>
             <div class="section-h"><h2>Appearance</h2></div>
             ${APP.seg('theme-seg', ['Light', 'Dark', 'System'], ['light', 'dark', 'system'].indexOf(theme))}
-            <p class="note pad" style="margin-top:22px">League data loads live from the league site, so scores and stats stay current without updating the app.</p>`;
+            <div class="section-h" style="margin-top:22px"><h2>App</h2></div>
+            <div class="card">
+                <div class="row tall"><span class="row-main"><b>Version ${esc(APP.version())}</b><small id="upd-status">League data loads live, so scores and stats stay current</small></span>
+                    <button class="chip" id="upd-check">Check for updates</button></div>
+                <a class="row tall" href="${APP.downloadPage}" target="_blank" rel="noopener"><span class="row-main"><b>Get the App page</b><small>Every version and how to install</small></span>${chev}</a>
+            </div>`;
         },
         after(route, el) {
+            const btn = el.querySelector('#upd-check'), status = el.querySelector('#upd-status');
+            if (btn) btn.addEventListener('click', async () => {
+                btn.disabled = true; status.textContent = 'Checking...';
+                const r = await APP.checkUpdate(true);
+                status.textContent = r.status === 'update' ? `Version ${r.latest} is out: tap the bar at the top to get it`
+                    : r.status === 'current' ? "You're on the newest version" : r.status === 'dev' ? 'Test build: no update check' : "Couldn't check right now";
+                btn.disabled = false;
+            });
             APP.bindSeg(el, 'theme-seg', i => {
                 const pick = ['light', 'dark', 'system'][i];
                 if (pick === 'system') {
