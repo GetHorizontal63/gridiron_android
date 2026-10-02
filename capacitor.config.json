@@ -3,6 +3,7 @@
   "appName": "Grass Touchers",
   "webDir": "www",
   "android": {
-    "backgroundColor": "#131518"
+    "backgroundColor": "#131518",
+    "adjustMarginsForEdgeToEdge": "force"
   }
 }

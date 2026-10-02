@@ -13,6 +13,13 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
+        <!-- the app sits between the system bars (capacitor.config adjustMarginsForEdgeToEdge); paint them coal
+             with light icons so they read as part of the app's own top and bottom bars -->
+        <item name="android:windowBackground">@color/app_bar</item>
+        <item name="android:statusBarColor">@color/app_bar</item>
+        <item name="android:navigationBarColor">@color/app_bar</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
     </style>
 
 

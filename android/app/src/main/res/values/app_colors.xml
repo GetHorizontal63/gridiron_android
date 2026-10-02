@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- coal: shows behind the status bar and the gesture bar, matching the app's top and bottom bars -->
+    <color name="app_bar">#131518</color>
+</resources>
