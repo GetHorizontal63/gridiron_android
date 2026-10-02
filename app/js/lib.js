@@ -78,8 +78,8 @@ window.LIB = (() => {
     // ---- playoff odds: Monte Carlo of the rest of the regular season (and the play-in bracket when the season has one).
     // Each team scores around its average so far, pulled toward the league average as if it had played four average
     // games; known future matchups are used when on file, random pairings otherwise. Seeds use the league tiebreak.
-    function odds(S, sims = 3000) {
-        const reg = S.played.filter(g => g.period === 'Regular');
+    function odds(S, sims = 3000, asOf = S.lastWeek) {
+        const reg = S.played.filter(g => g.period === 'Regular' && g.week <= asOf);
         const owners = S.divisions.flatMap(d => d.owners);
         const scores = Object.fromEntries(owners.map(o => [o, []]));
         reg.forEach(g => { scores[g.home] && scores[g.home].push(g.hs); scores[g.away] && scores[g.away].push(g.aws); });
@@ -91,7 +91,7 @@ window.LIB = (() => {
         const gauss = () => { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
         const score = o => mu[o] + sd * gauss();
         const future = [];
-        for (let w = S.lastWeek + 1; w <= S.endWeek; w++) {
+        for (let w = asOf + 1; w <= S.endWeek; w++) {
             const known = S.games.filter(g => g.week === w && g.period === 'Regular').map(g => [g.home, g.away]);
             future.push(known.length ? known : null);
         }
@@ -126,5 +126,29 @@ window.LIB = (() => {
         return tally;
     }
 
-    return { pts, ord, rec, headshot, imgFallback, season, lines, seed, odds };
+    // ---- one lineup: FP+, efficiency and the bench players who should have started. Same rules as the site's
+    // roster metrics: a bench player only counts if he beat a starter at his position (or filled an empty position).
+    function lineup(rows) {
+        const bench = rows.filter(r => r.slot === 'BE' || r.slot === 'IR'), active = rows.filter(r => r.slot !== 'BE' && r.slot !== 'IR');
+        const actual = active.reduce((t, r) => t + (r.points || 0), 0), projected = active.reduce((t, r) => t + (r.proj || 0), 0);
+        const options = [], emptyChecked = new Set();
+        bench.forEach(b => {
+            const bp = b.points || 0;
+            if (bp <= 0) return;
+            const same = active.filter(a => a.pos === b.pos);
+            same.forEach(a => { if (bp > (a.points || 0)) options.push({ bench: b, starter: a, gain: bp - (a.points || 0) }); });
+            if (!same.length && !emptyChecked.has(b.pos)) { options.push({ bench: b, starter: null, gain: bp }); emptyChecked.add(b.pos); }
+        });
+        options.sort((x, y) => y.gain - x.gain);
+        const usedB = new Set(), usedA = new Set(), swaps = [];
+        options.forEach(o => {
+            if (usedB.has(o.bench.playerId) || (o.starter && usedA.has(o.starter.playerId))) return;
+            usedB.add(o.bench.playerId); if (o.starter) usedA.add(o.starter.playerId);
+            swaps.push(o);
+        });
+        const optimal = actual + swaps.reduce((t, o) => t + o.gain, 0);
+        return { actual, projected, optimal, swaps, eff: optimal > 0 ? actual / optimal * 100 : null, fp: projected > 0 ? actual / projected * 100 : null };
+    }
+
+    return { pts, ord, rec, headshot, imgFallback, season, lines, seed, odds, lineup };
 })();

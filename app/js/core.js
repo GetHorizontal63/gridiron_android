@@ -26,13 +26,13 @@
     const icon = (name, fill = false) => `<svg viewBox="0 0 24 24" fill="${fill ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${I[name]}</svg>`;
 
     // ---------------------------------------------------------------- tabs + router
-    const TABS = [['home', 'Home'], ['scores', 'Scores'], ['standings', 'Standings'], ['managers', 'Managers'], ['more', 'More']];
+    const TABS = [['home', 'Home'], ['scores', 'Scores'], ['stats', 'Stats'], ['managers', 'Managers'], ['more', 'More']];
     const screens = {};
     const screenEl = document.getElementById('screen');
 
     function renderTabbar(active) {
         document.getElementById('tabbar').innerHTML = TABS.map(([key, label]) =>
-            `<a href="#/${key}" class="${key === active ? 'on' : ''}" aria-label="${label}">${icon(key, key === 'more')}<span>${label}</span></a>`).join('');
+            `<a href="#/${key}" class="${key === active ? 'on' : ''}" aria-label="${label}">${icon(key === 'stats' ? 'standings' : key, key === 'more')}<span>${label}</span></a>`).join('');
     }
     // top-level tabs show the league brand; detail screens show a back arrow and their own title
     function renderAppbar({ title, subtitle, back } = {}) {
@@ -101,6 +101,7 @@
     window.APP = {
         esc, icon, url, seg, bindSeg, replaceLinks, seasons, seasonChips, standingsRows,
         screen: (name, def) => { screens[name] = def; },
+        screenDef: name => screens[name],
         go: hash => { location.hash = hash; },
         start: () => show(),
         refresh: () => show(),

@@ -279,3 +279,91 @@ button.chip{font:inherit;font-size:13px;font-weight:700}
 .corps em{font-style:normal;font-size:11px;color:var(--muted)}
 .corps.empty img{filter:grayscale(1);opacity:.4}
 .corps.empty b{color:var(--muted)}
+
+/* ---- shared additions */
+.row-main.end{align-items:flex-end;text-align:right}
+.row.place{grid-template-columns:44px minmax(0,1fr) 36px auto}
+.row.on,.odds-row.on{background:rgba(var(--accent-rgb),.10)}
+.row-num.pos{color:var(--win)}
+.row-num.neg{color:var(--loss)}
+
+/* ---- pickers (as of / focus) */
+.pickers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0 12px 12px}
+.pickers label{display:flex;flex-direction:column;gap:4px;min-width:0}
+.pickers span{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.pickers select{height:44px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:0 12px;font:inherit;font-size:14px;font-weight:600;min-width:0}
+
+/* ---- charts */
+.chart-card{background:var(--surface);border-radius:14px;margin:0 12px 14px;padding:12px 10px 6px;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+:root[data-theme="dark"] .chart-card{box-shadow:none;border:1px solid var(--line)}
+.chart-h{font-size:12px;font-weight:700;color:var(--ink-2);padding:0 4px 6px;line-height:1.35}
+.chart{height:300px;width:100%}
+.chart.tall{height:440px}
+
+/* ---- game center: efficiency + replacements */
+.eff-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+.eff-team{padding:14px 12px;min-width:0}
+.eff-team + .eff-team{border-left:1px solid var(--line)}
+.eff-head{display:flex;align-items:center;gap:8px;height:30px;margin-bottom:8px;min-width:0}
+.eff-head img{width:28px;height:28px;object-fit:contain}
+.eff-head b{font-size:14px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.eff-stats{display:flex;flex-direction:column;gap:8px}
+.eff-stats span{display:flex;justify-content:space-between;align-items:baseline;height:26px}
+.eff-stats b{font-family:var(--display);font-weight:800;font-size:22px}
+.eff-stats small{font-size:11px;color:var(--muted);order:-1}
+.swap{display:grid;grid-template-columns:30px minmax(0,1fr) auto;align-items:center;gap:10px;height:58px;padding:0 14px;border-top:1px solid var(--line)}
+.card > .swap:first-child{border-top:0}
+.swap img{width:30px;height:30px;object-fit:contain}
+.swap-main{min-width:0;display:flex;flex-direction:column}
+.swap-main b{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.swap-main b i{font-style:normal;color:var(--win);font-weight:800;font-size:12px}
+.swap-main small{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.swap-gain{font-family:var(--display);font-weight:800;font-size:20px;color:var(--loss)}
+
+/* ---- bracket, round by round (swipe) */
+.br-scroll{overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;padding:0 12px 8px}
+.br-scroll::-webkit-scrollbar{display:none}
+.br-track{display:flex;gap:12px}
+.br-col{flex:0 0 84vw;max-width:360px;display:flex;flex-direction:column;justify-content:space-around;scroll-snap-align:start}
+.br-game{background:var(--surface);border-radius:14px;height:96px;display:grid;grid-template-rows:1fr 1fr;padding:4px 12px;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+:root[data-theme="dark"] .br-game{box-shadow:none;border:1px solid var(--line)}
+.br-side{display:grid;grid-template-columns:18px 26px minmax(0,1fr) auto;align-items:center;gap:8px;min-width:0}
+.br-side + .br-side{border-top:1px solid var(--line)}
+.br-side img{width:26px;height:26px;object-fit:contain}
+.br-seed{font-size:10.5px;font-weight:800;color:var(--muted);text-align:center}
+.br-side b{font-size:14px;font-weight:600;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.br-score{font-family:var(--display);font-weight:800;font-size:20px;color:var(--muted)}
+.br-side.won b{font-weight:800;color:var(--ink)}
+.br-side.won .br-score{color:var(--accent)}
+.br-side.tbd b{color:var(--muted)}
+
+/* ---- record book */
+.rb-cards{display:flex;flex-direction:column;gap:10px;margin:0 12px 18px}
+.rb-card{background:var(--surface);border-radius:14px;padding:12px 14px 6px;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+:root[data-theme="dark"] .rb-card{box-shadow:none;border:1px solid var(--line)}
+.rb-t{display:block;font-family:var(--display);font-weight:800;font-size:19px;text-transform:uppercase;line-height:1.1}
+.rb-s{display:block;font-size:11.5px;color:var(--muted);margin:2px 0 6px;line-height:1.35}
+.rb-line{display:grid;grid-template-columns:22px 28px minmax(0,1fr) auto;align-items:center;gap:10px;height:50px;border-top:1px solid var(--line)}
+.rb-line img{width:28px;height:28px;object-fit:contain}
+.rb-rank{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;font-size:11px;font-weight:800;background:var(--surface-2);color:var(--muted)}
+.rb-line.first .rb-rank{background:var(--accent);color:var(--on-accent)}
+.rb-who{min-width:0;display:flex;flex-direction:column}
+.rb-who b{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rb-who small{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rb-val{font-family:var(--display);font-weight:800;font-size:20px;text-align:right}
+.rb-line.first .rb-val{color:var(--accent)}
+
+/* ---- record vs playoffs grid */
+.ro-scroll{overflow-x:auto;margin:0 12px 18px;border-radius:12px}
+.ro{border-collapse:separate;border-spacing:2px;table-layout:fixed}
+.ro th{width:46px;height:28px;font-size:11px;font-weight:800;color:var(--muted)}
+.ro tbody th{width:40px}
+.ro td{width:46px;height:46px;border-radius:6px;text-align:center;color:#fff;line-height:1.05}
+.ro td b{display:block;font-size:12px;font-weight:800}
+.ro td span{font-size:10px;opacity:.9}
+.ro td.none{background:var(--surface-2)}
+
+/* ---- scorigami */
+.scori-scroll{overflow:auto;max-height:70vh;margin:0 12px 12px;background:var(--surface);border-radius:14px;padding:8px}
+:root[data-theme="dark"] .scori-scroll{border:1px solid var(--line)}
+.scori-tip{margin-bottom:18px}

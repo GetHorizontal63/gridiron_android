@@ -4,7 +4,8 @@
     const pct = v => `${Math.round(v * 100)}%`;
 
     APP.screen('standings', {
-        tab: 'standings',
+        tab: 'stats',
+        bar: r => ({ back: true, title: `${r.query.get('season') || ''} Standings`.trim() }),
         async render(route) {
             const b = await GT.load();
             const years = await APP.seasons();

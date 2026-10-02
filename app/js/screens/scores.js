@@ -64,22 +64,35 @@
                     return `<div class="bx-row">${cell(a, 'l')}${num(a, c)}<span class="bx-slot">${esc(slot)}</span>${num(c, a)}${cell(c, 'r')}</div>`;
                 });
             }).join('');
-            const bench = (rows, name) => rows.filter(r => r.slot === 'BE').sort((x, y) => (y.points || 0) - (x.points || 0))
-                .map(r => `<a class="row" href="#/player/${r.playerId}"><span class="row-main"><b>${esc(r.name)}</b><small>${esc(r.pos)} · ${esc(name)}</small></span><span class="row-num">${pts(r.points)}</span></a>`).join('');
-            const proj = rows => rows.filter(GT.isStarter).reduce((t, r) => t + (r.proj || 0), 0);
             const hasRoster = left.length || right.length;
+            const L1 = LIB.lineup(left), R1 = LIB.lineup(right);
+            // efficiency: each team's lineup grade, then the bench players who should have started (and who they'd replace)
+            const grade = (name, m) => `<div class="eff-team">
+                <div class="eff-head"><img src="${GT.logo(name)}" alt=""><b>${esc(name)}</b></div>
+                <div class="eff-stats">
+                    <span><b>${m.eff == null ? '-' : m.eff.toFixed(1) + '%'}</b><small>Efficiency</small></span>
+                    <span><b>${m.fp == null ? '-' : m.fp.toFixed(1)}</b><small>FP+</small></span>
+                    <span><b>${pts(m.optimal - m.actual)}</b><small>Left on bench</small></span>
+                </div></div>`;
+            const swapRows = (name, m) => m.swaps.length
+                ? m.swaps.map(o => `<div class="swap"><img src="${GT.logo(name)}" alt="">
+                    <span class="swap-main"><b>${esc(short(o.bench.name))} <i>in</i></b><small>${o.starter ? `for ${esc(short(o.starter.name))} (${pts(o.starter.points)}) · ${esc(o.bench.pos)}` : o.bench.pos ? `open ${esc(o.bench.pos)} spot` : 'no matching starter'}</small></span>
+                    <span class="swap-gain">+${pts(o.gain)}</span></div>`).join('')
+                : `<div class="swap none"><img src="${GT.logo(name)}" alt=""><span class="swap-main"><b>Perfect lineup</b><small>No bench player beat a starter</small></span></div>`;
             return `
             <div class="gc-head">
                 <div class="gc-meta">${esc(GT.periodLabel(g.period, g.week))} · ${g.season}</div>
                 <div class="gc-board">${side(g.home, g.hs, homeWon, 'l')}<span class="gc-vs">FINAL</span>${side(g.away, g.aws, awayWon, 'r')}</div>
-                ${hasRoster ? `<div class="gc-proj"><span>Proj ${pts(proj(left))}</span><span>Bench ${pts(g.hb)} · ${pts(g.ab)}</span><span>Proj ${pts(proj(right))}</span></div>` : ''}
+                ${hasRoster ? `<div class="gc-proj"><span>Proj ${pts(L1.projected)}</span><span></span><span>Proj ${pts(R1.projected)}</span></div>` : ''}
             </div>
             ${hasRoster ? `
-            ${APP.seg('gc-seg', ['Box score', 'Bench'])}
+            ${APP.seg('gc-seg', ['Box score', 'Efficiency'])}
             <div class="card gc-pane" data-pane="0">${slotRows}</div>
-            <div class="card gc-pane" data-pane="1" hidden>
-                <div class="list-h">${esc(g.home)}</div>${bench(left, g.home) || '<p class="muted pad" style="padding:12px 14px">No bench saved.</p>'}
-                <div class="list-h">${esc(g.away)}</div>${bench(right, g.away) || '<p class="muted pad" style="padding:12px 14px">No bench saved.</p>'}
+            <div class="gc-pane" data-pane="1" hidden>
+                <div class="card eff-grid">${grade(g.home, L1)}${grade(g.away, R1)}</div>
+                <div class="section-h" style="margin-top:16px"><h2 style="font-size:18px">Replacements</h2></div>
+                <p class="note pad">Bench players who outscored a starter at their position, and who they'd have replaced in the best lineup.</p>
+                <div class="card">${swapRows(g.home, L1)}${swapRows(g.away, R1)}</div>
             </div>` : '<p class="muted pad">No lineups were saved for this game.</p>'}`;
         },
         after(route, el) {
