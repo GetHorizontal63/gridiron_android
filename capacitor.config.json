@@ -1,0 +1,8 @@
+{
+  "appId": "com.grasstouchers.ffl",
+  "appName": "Grass Touchers",
+  "webDir": "www",
+  "android": {
+    "backgroundColor": "#131518"
+  }
+}

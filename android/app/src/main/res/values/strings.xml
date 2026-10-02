@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Grass Touchers</string>
+    <string name="title_activity_main">Grass Touchers</string>
+    <string name="package_name">com.grasstouchers.ffl</string>
+    <string name="custom_url_scheme">com.grasstouchers.ffl</string>
+</resources>
