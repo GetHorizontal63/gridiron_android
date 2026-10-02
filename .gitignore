@@ -11,3 +11,4 @@ keystore.properties
 *.jks
 *.keystore
 dist/
+BUILD_NOTES.md
