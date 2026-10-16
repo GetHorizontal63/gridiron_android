@@ -9,12 +9,15 @@
         async render() {
             const theme = (() => { try { return localStorage.getItem('gt-theme') || 'system'; } catch (_) { return 'system'; } })();
             const item = (href, title, sub) => `<a class="row tall" href="${href}"><span class="row-main"><b>${title}</b><small>${sub}</small></span>${chev}</a>`;
-            return `
+            return `${APP.pageHead({ eyebrow: 'Grass Touchers Fantasy Football League', title: 'More' })}
             <div class="section-h"><h2>Explore</h2></div>
             <div class="card" style="margin-bottom:22px">
+                ${item('#/seasons', 'Past Seasons', 'Champions and final standings, every year')}
+                ${item('#/moments', 'Historic League Moments', 'The matchups that came down to one play, replayed')}
+                ${item('#/draftgrades', 'Draft Grades', 'Every draft graded on draft day and after the season')}
+                ${item('#/moves', 'Trades & Free Agency', 'Every trade and pickup, graded')}
                 ${item('#/players', 'Players', 'Every NFL player since 2019, game by game')}
                 ${item('#/records', 'Record Book', 'Every league record, record vs. playoffs and Scorigami')}
-                ${item('#/seasons', 'Past Seasons', 'Champions and final standings, every year')}
                 ${item('#/marched', 'Where We Marched', 'The drum corps our members marched with')}
             </div>
             <div class="section-h"><h2>Appearance</h2></div>
@@ -22,7 +25,7 @@
             <div class="section-h" style="margin-top:22px"><h2>App</h2></div>
             <div class="card">
                 <div class="row tall"><span class="row-main"><b>Version ${esc(APP.version())}</b><small id="upd-status">League data loads live, so scores and stats stay current</small></span>
-                    <button class="chip" id="upd-check">Check for updates</button></div>
+                    <button class="btn-line" id="upd-check">Check</button></div>
                 <a class="row tall" href="${APP.downloadPage}" target="_blank" rel="noopener"><span class="row-main"><b>Get the App page</b><small>Every version and how to install</small></span>${chev}</a>
             </div>`;
         },
@@ -46,43 +49,50 @@
     });
 
     // ---------------------------------------------------------------- players
-    const FANTASY = { QB: 'QB', RB: 'RB', FB: 'RB', WR: 'WR', TE: 'TE', K: 'K', PK: 'K', P: 'P', 'D/ST': 'D/ST' };
-    const POS = ['All', 'QB', 'RB', 'WR', 'TE', 'K', 'D/ST'];
+    const POS = ['All', 'QB', 'WR', 'RB', 'TE', 'K', 'P', 'D/ST', 'HC'];
+    const GROUP = { QB: 'QB', WR: 'WR', RB: 'RB', FB: 'RB', HB: 'RB', TE: 'TE', K: 'K', PK: 'K', P: 'P', 'D/ST': 'D/ST', HC: 'HC' };
     APP.screen('players', {
         tab: 'more',
         bar: () => ({ back: true, title: 'Players' }),
         async render() {
-            return `<div class="search"><input id="pl-q" type="search" placeholder="Search players" autocomplete="off" enterkeyhint="search"></div>
-                <div class="chips" id="pl-pos">${POS.map((p, i) => `<button class="chip${i ? '' : ' on'}" data-pos="${p}">${p}</button>`).join('')}</div>
-                <div class="card" id="pl-list"><div class="loading"><span class="spinner"></span>Loading players...</div></div>
-                <button class="more-btn" id="pl-more" hidden>Show more</button>`;
+            return `${APP.pageHead({ eyebrow: 'Every NFL player since 2019', title: 'Players' })}<div class="search"><input id="pl-q" type="search" placeholder="Search players" autocomplete="off" enterkeyhint="search"></div>
+                <div class="seg pl-seg" id="pl-pos">${POS.map((p, i) => `<button class="${i ? '' : 'on'}" data-pos="${p}">${p}</button>`).join('')}</div>
+                <div class="card" id="pl-list"><div class="loading"><span class="spinner"></span>Loading players...</div></div><div class="pager" id="pl-pager"></div>`;
         },
         async after(route, el) {
             const b = await GT.load();
             const year = String(b.season);
-            const all = (await PS.index()).filter(p => FANTASY[p.pos]).map(p => {
+            const coaches = await GT.query(`SELECT p.player_id AS id, p.name, p.pro_team AS team,
+                    SUM(CASE WHEN w.season = $s THEN COALESCE(w.points, 0) ELSE 0 END) AS now, SUM(COALESCE(w.points, 0)) AS career
+                FROM players p LEFT JOIN player_week_points w ON w.player_id = p.player_id WHERE p.position = 'HC' GROUP BY p.player_id`, { $s: b.season });
+            const all = [...coaches.map(c => ({ id: String(c.id), name: c.name, pos: 'HC', team: c.team, group: 'HC', now: c.now || 0, career: c.career || 0 }))];
+            all.push(...(await PS.index()).filter(p => GROUP[p.pos]).map(p => {
                 const s = (p.fp || {})[year] || {}, total = (s.REG || [0, 0])[1] + (s.POST || [0, 0])[1];
                 const career = Object.values(p.fp || {}).reduce((t, x) => t + (x.REG || [0, 0])[1] + (x.POST || [0, 0])[1], 0);
-                return { ...p, group: FANTASY[p.pos], now: total, career };
-            });
-            let pos = 'All', q = '', shown = 40;
+                return { ...p, group: GROUP[p.pos], now: total, career };
+            }));
+            let pos = 'All', q = '', page = 0;
+            const PER = 10;
             const draw = () => {
                 const ql = q.trim().toLowerCase();
                 const list = all.filter(p => (pos === 'All' || p.group === pos) && (!ql || p.name.toLowerCase().includes(ql)))
                     .sort((x, y) => (ql ? y.career - x.career : (y.now - x.now) || (y.career - x.career)));
-                el.querySelector('#pl-list').innerHTML = list.slice(0, shown).map(p => `<a class="row" href="#/player/${encodeURIComponent(p.id)}">
+                const pages = Math.max(1, Math.ceil(list.length / PER)); page = Math.min(page, pages - 1);
+                el.querySelector('#pl-list').innerHTML = list.slice(page * PER, page * PER + PER).map(p => `<a class="row" href="#/player/${encodeURIComponent(p.id)}">
                     <span class="row-shot"><img src="${LIB.headshot(Number(p.id), p.team)}" alt="" loading="lazy" ${LIB.imgFallback}></span>
                     <span class="row-main"><b>${esc(p.name)}</b><small>${esc(p.pos)} · ${esc(p.team || '')}</small></span>
                     <span class="row-num">${pts(ql ? p.career : p.now)}<small>${ql ? 'career' : year}</small></span></a>`).join('')
                     || '<p class="muted" style="padding:16px">No players found.</p>';
-                el.querySelector('#pl-more').hidden = list.length <= shown;
+                const bar = el.querySelector('#pl-pager');
+                bar.innerHTML = list.length > PER ? `<button ${page ? '' : 'disabled'} data-p="${page - 1}">${icon('prev')}</button><span>${page * PER + 1}–${Math.min(list.length, page * PER + PER)} of ${list.length}</span>
+                    <button ${page < pages - 1 ? '' : 'disabled'} data-p="${page + 1}">${icon('next')}</button>` : '';
+                bar.querySelectorAll('button').forEach(btn => btn.addEventListener('click', () => { page = Number(btn.dataset.p); draw(); window.scrollTo(0, 0); }));
             };
-            el.querySelector('#pl-q').addEventListener('input', e => { q = e.target.value; shown = 40; draw(); });
-            el.querySelectorAll('#pl-pos .chip').forEach(c => c.addEventListener('click', () => {
-                el.querySelectorAll('#pl-pos .chip').forEach(x => x.classList.toggle('on', x === c));
-                pos = c.dataset.pos; shown = 40; draw();
+            el.querySelector('#pl-q').addEventListener('input', e => { q = e.target.value; page = 0; draw(); });
+            el.querySelectorAll('#pl-pos button').forEach(c => c.addEventListener('click', () => {
+                el.querySelectorAll('#pl-pos button').forEach(x => x.classList.toggle('on', x === c));
+                pos = c.dataset.pos; page = 0; draw();
             }));
-            el.querySelector('#pl-more').addEventListener('click', () => { shown += 40; draw(); });
             draw();
         }
     });
@@ -95,7 +105,7 @@
             const [p, games, league] = await Promise.all([PS.player(id).catch(() => null), PS.games().catch(() => ({})), PS.leagueHistory(id).catch(() => [])]);
             if (!p) {                                         // head coaches have no NFL stat line, only league history
                 APP.playerTitle = 'Player';
-                return `<div class="card">${league.map(h => `<div class="row"><span class="row-main"><b>${h.season} · ${esc(h.owner)}</b><small>${h.starts} starts</small></span><span class="row-num">${pts(h.pts)}</span></div>`).join('')
+                return `${APP.pageHead({ eyebrow: 'League history', title: 'Player' })}<div class="card">${league.map(h => `<div class="row"><span class="row-main"><b>${h.season} · ${esc(h.owner)}</b><small>${h.starts} starts</small></span><span class="row-num">${pts(h.pts)}</span></div>`).join('')
                         || '<p class="muted" style="padding:16px">No stats on file.</p>'}</div>`;
             }
             APP.playerTitle = p.name;
@@ -110,10 +120,8 @@
             const line = r => cols.map(([h, k]) => `${PS.n(r, k)} ${h}`).join(' · ');
             const tile = (label, value, sub = '') => `<div class="tile"><span>${label}</span><b>${value}</b>${sub ? `<small>${sub}</small>` : ''}</div>`;
             return `
-            <div class="profile player">
-                <span class="row-shot big"><img src="${LIB.headshot(Number(p.id), team)}" alt="" ${LIB.imgFallback}></span>
-                <div><b>${esc(p.name)}</b><small>${esc(p.pos)} · ${esc(team)}${p.bio && p.bio.college ? ' · ' + esc(p.bio.college) : ''}</small></div>
-            </div>
+            ${APP.pageHead({ logo: LIB.headshot(Number(p.id), team), round: true, title: p.name,
+                eyebrow: `${esc(p.pos)} · ${esc(team)}${p.bio && p.bio.college ? ' · ' + esc(p.bio.college) : ''}`, meta: `${year} · ${mine.length} game${mine.length === 1 ? '' : 's'} · ${pts(tot)} pts` })}
             ${APP.seasonChips(years, year, y => `#/player/${encodeURIComponent(id)}?season=${y}`)}
             <div class="tiles">
                 ${tile('Games', mine.length)}
@@ -122,7 +130,7 @@
                 ${tile('Best game', best ? pts(best.r.fpts) : '-', best ? `${PS.typeLabel(best.g)} vs ${esc(PS.side(best.r, best.g).opp)}` : '')}
             </div>
             <div class="section-h"><h2>Game Log</h2></div>
-            <div class="card">${mine.slice().reverse().map(({ r, g }) => {
+            <div class="card" data-pager>${mine.slice().reverse().map(({ r, g }) => {
                 const s = PS.side(r, g), won = s.us > s.them;
                 return `<div class="row"><span class="res ${won ? 'w' : 'l'}">${won ? 'W' : 'L'}</span>
                     <span class="row-main"><b>${esc(PS.typeLabel(g))} ${s.home ? 'vs' : '@'} ${esc(s.opp)}</b><small>${esc(line(r))}</small></span>
@@ -141,8 +149,7 @@
     });
 
     // ---------------------------------------------------------------- record book (the website's full Record Book)
-    const RB_TABS = [['league-records', 'League'], ['single-game', 'Single Game'], ['single-season', 'Single Season'],
-                     ['record-vs-playoffs', 'vs Playoffs'], ['scorigami', 'Scorigami']];
+    const RB_TABS = [['league-records', 'League'], ['single-game', 'Single Game'], ['single-season', 'Single Season']];
     const holder = label => String(label || '').split(/[\s(]/)[0];
     const holderText = d => {                                   // "Owner (2019 Wk 7) - Player" -> player, then owner · week
         const m = String(d.team).match(/^(.+?) \((\d{4}) Wk (\d+)\) - (.+)$/);
@@ -154,7 +161,7 @@
         bar: () => ({ back: true, title: 'Record Book' }),
         async render(route) {
             const tab = RB_TABS.some(t => t[0] === route.query.get('tab')) ? route.query.get('tab') : 'league-records';
-            const chips = `<div class="chips">${RB_TABS.map(([k, l]) => `<a class="chip${k === tab ? ' on' : ''}" href="#/records?tab=${k}" data-replace>${l}</a>`).join('')}</div>`;
+            const chips = `${APP.pageHead({ eyebrow: `League records since 2019 · ${esc(RB_TABS.find(t => t[0] === tab)[1])}`, title: 'Record Book' })}<div class="chips">${RB_TABS.map(([k, l]) => `<a class="chip${k === tab ? ' on' : ''}" href="#/records?tab=${k}" data-replace>${l}</a>`).join('')}</div>`;
             if (tab === 'record-vs-playoffs') return chips + await recordOdds();
             if (tab === 'scorigami') return chips + await scorigami();
             const { categories, results } = await RB.compute(tab);
@@ -265,6 +272,8 @@
     }
 
     // ---------------------------------------------------------------- past seasons
+    // each NFL season's photo (app/assets/seasons/<year>.jpg) and where to keep it framed in the band
+    const SEASON_FOCUS = { 2019: '65% 25%', 2020: '72% 15%', 2021: '65% 25%', 2022: '58% 20%', 2023: '30% 25%', 2024: '55% 20%', 2025: '55% 20%', 2026: '50% 15%' };
     APP.screen('seasons', {
         tab: 'more',
         bar: () => ({ back: true, title: 'Past Seasons' }),
@@ -272,11 +281,18 @@
             const b = await GT.load();
             const years = await APP.seasons();
             const placed = (y, n) => { const k = Object.keys(b.finish).find(key => key.startsWith(`${y}-`) && b.finish[key] === n); return k ? b.byId[k.split('-')[1]] : null; };
-            return `<div class="card">${years.map(y => {
-                const champ = placed(y, 1), second = placed(y, 2);
-                return `<a class="row tall" href="#/season/${y}"><span class="yr">${y}</span>
-                    ${champ ? `<img class="row-logo" src="${GT.logo(champ.name)}" alt="">` : '<span class="row-logo"></span>'}
-                    <span class="row-main"><b>${champ ? esc(champ.name) : 'In progress'}</b><small>${champ ? `Champion${second ? ` · ${esc(second.name)} 2nd` : ''}` : 'Season underway'}</small></span>${chev}</a>`;
+            // the season in progress: its current leader (best record, then points for)
+            const live = years.find(y => !placed(y, 1));
+            let leader = null;
+            if (live) { const S = await LIB.season(live); const reg = S.played.filter(g => g.period === 'Regular');
+                leader = LIB.lines(S.divisions.flatMap(d => d.owners), reg).sort((x, y) => y.pct - x.pct || y.pf - x.pf)[0]; }
+            return `${APP.pageHead({ eyebrow: `${years.length} seasons of Grass Touchers`, title: 'Past Seasons', image: 'background-3.png' })}<div class="ps-list">${years.map(y => {
+                const champ = placed(y, 1), second = placed(y, 2), who = champ ? champ.name : leader && y === live ? leader.owner : null;
+                return `<a class="ps-band${champ ? '' : ' live'}" href="#/season/${y}" style="--photo:url('../assets/seasons/${y}.jpg');--pos:${SEASON_FOCUS[y] || '50% 30%'}">
+                    <span class="ps-year">${y}</span>
+                    <span class="ps-champ">${who ? `<span class="ps-logo"><img src="${GT.logo(who)}" alt=""></span>` : ''}
+                        <span class="ps-text"><small>${champ ? 'Champion' : 'In progress · leader'}</small><b>${who ? esc(who) : 'Season underway'}</b>
+                            <em>${champ ? `${esc(GT.teamName(b, champ.name, y))}${second ? ` · ${esc(second.name)} 2nd` : ''}` : leader && y === live ? `${leader.w}-${leader.l} · ${Math.round(leader.pf)} points` : ''}</em></span></span></a>`;
             }).join('')}</div>`;
         }
     });
@@ -316,7 +332,7 @@
                             return `<a class="br-game"${r.gameId ? ` href="#/game/${r.gameId}"` : ''}>${side(gr.name, r.team, r.teamScore, won)}${side(gr.name, r.opponent, r.opponentScore, lost)}</a>`; }).join('')}
                     </div>`).join('')}</div></div></div>`;
             }).join('');
-            return `
+            return `${APP.pageHead({ eyebrow: champ ? `Champion ${esc(champ.o.name)}` : 'In progress', title: `${year} Season` })}
             ${champ ? `<div class="champ"><img src="${GT.logo(champ.o.name)}" alt=""><span><small>${year} Champion</small><b>${esc(champ.o.name)}</b>
                 <small>${esc(GT.teamName(b, champ.o.name, year))}</small></span></div>` : ''}
             <div class="row-links">
@@ -365,8 +381,8 @@
                     <b>${esc(c.name)}</b><span>${members.map(m => { const o = b.byName[m.toLowerCase()];
                         return o ? `<a href="#/manager/${o.id}">${esc(m)}</a>` : `<i>${esc(m)}</i>`; }).join('') || '<em>No members</em>'}</span></div>`;
             };
-            return [['World_Class', 'World Class'], ['Open_Class', 'Open Class'], ['All_Age', 'All Age']].map(([k, label]) => {
-                const list = (data[k] || []).slice().sort((x, y) => (!!y.members - !!x.members) || x.name.localeCompare(y.name));
+            return APP.pageHead({ eyebrow: 'The drum corps our members marched with', title: 'Where We Marched' }) + [['World_Class', 'World Class'], ['Open_Class', 'Open Class'], ['All_Age', 'All Age']].map(([k, label]) => {
+                const list = (data[k] || []).slice().sort((x, y) => x.name.localeCompare(y.name));   // alphabetical within the class
                 return list.length ? `<div class="section-h"><h2>${label}</h2><span class="muted" style="font-size:12px">${list.filter(c => c.members).length} with members</span></div>
                     <div class="corps-grid">${list.map(card).join('')}</div>` : '';
             }).join('');

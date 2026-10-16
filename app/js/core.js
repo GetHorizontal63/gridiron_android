@@ -35,7 +35,8 @@
             `<a href="#/${key}" class="${key === active ? 'on' : ''}" aria-label="${label}">${icon(key === 'stats' ? 'standings' : key, key === 'more')}<span>${label}</span></a>`).join('');
     }
     // top-level tabs show the league brand; detail screens show a back arrow and their own title
-    function renderAppbar({ title, subtitle, back } = {}) {
+    // one app bar everywhere: the league brand. No back arrows; the phone's own back gesture / button handles that.
+    function renderAppbar({ title, subtitle } = {}) { const back = false;
         document.getElementById('appbar').innerHTML = back
             ? `<button class="ab-btn" onclick="history.back()" aria-label="Back">${icon('back')}</button>
                <div class="ab-title"><span style="min-width:0"><b>${esc(title)}</b>${subtitle ? `<small>${esc(subtitle)}</small>` : ''}</span></div><span></span>`
@@ -51,9 +52,10 @@
     }
     let token = 0;
     async function show() {
+        if (window.GT && !season) { try { await GT.load(); } catch (_) { /* offline: the bar falls back */ } }   // the bar shows the season on every screen
         const route = parse(), screen = screens[route.name], mine = ++token;
         renderTabbar(screen.tab || route.name);
-        renderAppbar(screen.bar ? screen.bar(route) : {});
+        renderAppbar({});
         screenEl.className = 'screen';
         screenEl.innerHTML = '<div class="loading"><span class="spinner"></span>Loading...</div>';
         window.scrollTo(0, 0);
@@ -62,9 +64,12 @@
             if (mine !== token) return;                     // the user already moved on
             screenEl.innerHTML = html;
             void screenEl.offsetWidth; screenEl.classList.add('enter');
+            screenEl.querySelectorAll('select[data-nav]').forEach(s => s.addEventListener('change', () => location.replace(s.value)));
+            screenEl.querySelectorAll('[data-pager]').forEach(list => paginate(list));
+            // page header titles stay on one line: shrink the text to fit, like the website's hero title
+            screenEl.querySelectorAll('.ph-title').forEach(h => { let s = parseFloat(getComputedStyle(h).fontSize); while (h.scrollWidth > h.clientWidth && s > 18) h.style.fontSize = `${--s}px`; });
             if (screen.after) screen.after(route, screenEl);
-            if (screen.bar) renderAppbar(screen.bar(route));
-            else renderAppbar({});
+            renderAppbar({});                                // again, once the season is known
         } catch (error) {
             console.error(error);
             if (mine === token) screenEl.innerHTML = `<div class="next"><h2>Can't load</h2><p>Check your connection and try again.</p></div>`;
@@ -85,8 +90,13 @@
     }));
     let seasonList = null;
     const seasons = () => seasonList || (seasonList = GT.query('SELECT DISTINCT season FROM matchups ORDER BY season DESC').then(r => r.map(x => x.season)));
-    const seasonChips = (list, year, href, extra = '') => `<div class="chips">${extra}${list.map(y =>
-        `<a class="chip${y === year ? ' on' : ''}" href="${href(y)}" data-replace>${y}</a>`).join('')}</div>`;
+    // the website's controls: labeled dropdowns in one bar. A field = { label, options: [[href, text, selected]] };
+    // picking an option goes to its href (in place, no back-history)
+    const ctl = field => `<label class="ctl"><span>${esc(field.label)}</span><select data-nav>${field.options.map(([href, text, on]) =>
+        `<option value="${esc(href)}"${on ? ' selected' : ''}>${esc(text)}</option>`).join('')}</select></label>`;
+    const ctlBar = (...fields) => `<div class="ctl-bar" style="--n:${fields.filter(Boolean).length}">${fields.filter(Boolean).map(ctl).join('')}</div>`;
+    const seasonField = (list, year, href, extra = []) => ({ label: 'Season', options: [...extra, ...list.map(y => [href(y), `${y} season`, y === year])] });
+    const seasonChips = (list, year, href, extra = []) => ctlBar(seasonField(list, year, href, extra));
     // division standings rows (seed, logo, manager, W-L, diff, PF) with the bye / play-in / playoff cut lines
     function standingsRows(rows, d, b) {
         const cut = n => n && (n === d.auto || (d.playin && n === d.auto + d.playin));
@@ -97,6 +107,33 @@
                 <span class="num">${Math.round(r.pf)}</span></a>`).join('')}
             ${d.auto ? `<div class="st-legend">${d.playin ? `1–${d.auto} bye · ${d.auto + 1}–${d.auto + d.playin} play-in · ${d.auto + d.playin + 1}+ Gulag` : `Top ${d.auto} make the playoffs`}</div>` : ''}`;
     }
+
+    // ---------------------------------------------------------------- ten rows at a time (lists marked data-pager, or paginate(el))
+    function paginate(list, per = 10) {
+        if (list.nextElementSibling && list.nextElementSibling.classList.contains('pager')) list.nextElementSibling.remove();
+        const rows = [...list.children], pages = Math.ceil(rows.length / per);
+        rows.forEach(r => { r.hidden = false; });
+        if (pages < 2) return;
+        const bar = document.createElement('div'); bar.className = 'pager';
+        list.after(bar);
+        const go = n => {
+            rows.forEach((r, i) => { r.hidden = Math.floor(i / per) !== n; });
+            bar.innerHTML = `<button ${n ? '' : 'disabled'} data-p="${n - 1}">${icon('prev')}</button><span>${n * per + 1}–${Math.min(rows.length, n * per + per)} of ${rows.length}</span>
+                <button ${n < pages - 1 ? '' : 'disabled'} data-p="${n + 1}">${icon('next')}</button>`;
+            bar.querySelectorAll('button').forEach(btn => btn.addEventListener('click', () => go(Number(btn.dataset.p))));
+        };
+        go(0);
+    }
+
+    // ---------------------------------------------------------------- page header: the website's page hero (a league photo in
+    // black and white under a dark gradient, a small-caps eyebrow, a big uppercase title, optionally a logo on a white square)
+    const PHOTOS = [...Array.from({ length: 18 }, (_, i) => `background-${i + 1}.png`), ...Array.from({ length: 16 }, (_, i) => `background-${i + 19}.jpg`)];
+    const photo = () => `https://grasstouchers.football/assets/images/${PHOTOS[Math.floor(Math.random() * PHOTOS.length)]}`;
+    // image: a fixed header photo for a page (a file in the site's photo pool); otherwise a random one
+    const pageHead = ({ eyebrow = '', title, logo = '', round = false, meta = '', image = '' }) => `<section class="ph" style="--photo:url('${image ? `https://grasstouchers.football/assets/images/${image}` : photo()}')">
+        ${logo ? `<span class="ph-logo${round ? ' round' : ''}"><img src="${logo}" alt="" ${round ? `onerror="this.src='assets/nfl-logos/nfl.png';this.onerror=null"` : ''}></span>` : ''}
+        <div class="ph-text">${eyebrow ? `<div class="ph-eyebrow">${eyebrow}</div>` : ''}<h1 class="ph-title">${esc(title)}</h1>${meta ? `<div class="ph-meta">${meta}</div>` : ''}</div>
+    </section>`;
 
     // ---------------------------------------------------------------- update check: newest release on GitHub vs this build
     const DOWNLOAD_PAGE = 'https://grasstouchers.football/pages/app.html';
@@ -130,7 +167,7 @@
 
     window.APP = {
         checkUpdate, version: () => window.APP_VERSION || 'dev', downloadPage: DOWNLOAD_PAGE,
-        esc, icon, url, seg, bindSeg, replaceLinks, seasons, seasonChips, standingsRows,
+        esc, icon, url, seg, bindSeg, replaceLinks, seasons, seasonChips, seasonField, ctlBar, standingsRows, pageHead, photo, paginate,
         screen: (name, def) => { screens[name] = def; },
         screenDef: name => screens[name],
         go: hash => { location.hash = hash; },
