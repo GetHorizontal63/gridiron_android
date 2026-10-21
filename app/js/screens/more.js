@@ -286,7 +286,10 @@
             let leader = null;
             if (live) { const S = await LIB.season(live); const reg = S.played.filter(g => g.period === 'Regular');
                 leader = LIB.lines(S.divisions.flatMap(d => d.owners), reg).sort((x, y) => y.pct - x.pct || y.pf - x.pf)[0]; }
-            return `${APP.pageHead({ eyebrow: `${years.length} seasons of Grass Touchers`, title: 'Past Seasons', image: 'background-3.png' })}<div class="ps-list">${years.map(y => {
+            // Watch (the season in progress' live TV) sits above the seasons, like the website's All Seasons tabs
+            return `${APP.pageHead({ eyebrow: `${years.length} seasons of Grass Touchers`, title: 'Past Seasons', image: 'background-3.png' })}
+            <div class="row-links"><a class="row tall" href="#/watch"><span class="row-main"><b>Watch</b><small>${b.season} live TV · members only</small></span>${chev}</a></div>
+            <div class="ps-list">${years.map(y => {
                 const champ = placed(y, 1), second = placed(y, 2), who = champ ? champ.name : leader && y === live ? leader.owner : null;
                 return `<a class="ps-band${champ ? '' : ' live'}" href="#/season/${y}" style="--photo:url('../assets/seasons/${y}.jpg');--pos:${SEASON_FOCUS[y] || '50% 30%'}">
                     <span class="ps-year">${y}</span>

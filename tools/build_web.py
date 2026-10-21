@@ -9,7 +9,7 @@ www/ is generated output: it is rebuilt from scratch on every run from
   * app/                                    the app's page, styles and screens
   * Shakuro Style/js  (DATA_MODULES only)   the shared data code (database, players, analytics)
   * Shakuro Style/assets (ASSETS only)      the logos the app shows
-  * vendor-cache/                           sql.js, ECharts and the fonts, downloaded once, so nothing loads from a CDN
+  * vendor-cache/                           sql.js, ECharts, mpegts.js and the fonts, downloaded once, so nothing loads from a CDN
 Shakuro Style itself is never changed.
 
   python tools/build_web.py          (then: npx cap sync android)
@@ -25,11 +25,12 @@ SOURCE = APP / "app"
 WWW = APP / "www"
 CACHE = APP / "vendor-cache"
 
-DATA_MODULES = ["league-db.js", "data.js", "players.js", "analytics.js", "roster-metrics.js"]
+DATA_MODULES = ["league-db.js", "data.js", "players.js", "analytics.js", "roster-metrics.js", "watch.js", "nflplus.js", "live-fantasy.js", "watch-matchup.js"]
 ASSETS = ["logos/logo_2.png", "manager-logos", "nfl-logos", "icons/dci-logos"]
 SQL_JS = "https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.13.0/sql-wasm.js"
 SQL_WASM = "https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.13.0/sql-wasm.wasm"
 ECHARTS = "https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"
+MPEGTS_JS = "https://cdn.jsdelivr.net/npm/mpegts.js@1.7.3/dist/mpegts.js"   # Watch: Dispatcharr's raw MPEG-TS streams
 FONTS = "https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&family=Inter:wght@400;500;600;700;800&display=swap"
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"   # gets woff2 fonts
 
@@ -48,7 +49,7 @@ def fetch(url, dest):
 def vendor():
     out = WWW / "vendor"
     out.mkdir(parents=True, exist_ok=True)
-    for url in (SQL_JS, SQL_WASM, ECHARTS):
+    for url in (SQL_JS, SQL_WASM, ECHARTS, MPEGTS_JS):
         shutil.copy2(fetch(url, CACHE / url.rsplit("/", 1)[1]), out)
     css = fetch(FONTS, CACHE / "fonts.css").read_text(encoding="utf-8")
     (out / "fonts").mkdir(exist_ok=True)
