@@ -4,6 +4,10 @@
     const { pts, ord } = LIB;
     const chev = `<span class="row-chev">${icon('next')}</span>`;
 
+    // this season's managers, for the "Your team" setting
+    const meList = async () => { const b = await GT.load();
+        return GT.query(`SELECT DISTINCT o.owner_id AS id, o.display_name AS name FROM fantasy_rosters fr JOIN owners o ON o.owner_id = fr.owner_id
+            WHERE fr.season = $s ORDER BY o.display_name`, { $s: b.season }); };
     APP.screen('more', {
         tab: 'more',
         async render() {
@@ -20,6 +24,10 @@
                 ${item('#/records', 'Record Book', 'Every league record, record vs. playoffs and Scorigami')}
                 ${item('#/marched', 'Where We Marched', 'The drum corps our members marched with')}
             </div>
+            <div class="section-h"><h2>Your team</h2></div>
+            <div class="ctl-bar" style="--n:1"><label class="ctl"><span>I am</span><select id="me-pick"><option value="">Not set</option>${(await meList()).map(m =>
+                `<option value="${m.id}"${m.id === APP.me() ? ' selected' : ''}>${esc(m.name)}</option>`).join('')}</select></label></div>
+            <p class="note pad" style="margin-top:6px">Watch shows your matchup and your fantasy ticker. A manager's Watch code picks for you.</p>
             <div class="section-h"><h2>Appearance</h2></div>
             ${APP.seg('theme-seg', ['Light', 'Dark', 'System'], ['light', 'dark', 'system'].indexOf(theme))}
             <div class="section-h" style="margin-top:22px"><h2>App</h2></div>
@@ -38,6 +46,8 @@
                     : r.status === 'current' ? "You're on the newest version" : r.status === 'dev' ? 'Test build: no update check' : "Couldn't check right now";
                 btn.disabled = false;
             });
+            const pick = el.querySelector('#me-pick');
+            if (pick) pick.addEventListener('change', () => APP.setMe(Number(pick.value) || null));
             APP.bindSeg(el, 'theme-seg', i => {
                 const pick = ['light', 'dark', 'system'][i];
                 if (pick === 'system') {

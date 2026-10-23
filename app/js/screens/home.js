@@ -55,7 +55,7 @@
                     <div class="ft-panel">
                         <div class="ft-kicker">Final · Grass Touchers · ${esc(GT.periodLabel(g.period, g.week))}</div>
                         <h2 class="ft-head">${esc(wName)} ${verb} ${esc(lName)}</h2>
-                        <p class="ft-copy">${esc(wName)} put up ${pts(wPts)}${rank === 1 ? ', the top score of the week,' : ''} to beat ${esc(lName)} by ${pts(m)}.</p>
+                        <p class="ft-copy">Won by ${pts(m)}${rank === 1 ? ' · Top score of the week' : ''}</p>
                         <div class="ft-teams">${bar(wName, wPts, true)}${bar(lName, lPts, false)}</div>
                         <div class="ft-actions"><a class="ft-btn accent" href="#/game/${g.id}">Game center</a>
                             <a class="ft-btn white" href="#/manager/${wId}?season=${b.season}">${esc(wName)}</a>

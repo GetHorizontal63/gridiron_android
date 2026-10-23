@@ -165,7 +165,19 @@
         document.body.appendChild(bar); document.body.classList.add('has-update');
     }
 
+    // "Your team" (More > Your team): the manager this phone belongs to; Watch shows their matchup when the code doesn't say
+    const me = () => { try { return Number(localStorage.getItem('gt-me')) || null; } catch (_) { return null; } };
+    const setMe = id => { try { if (id) localStorage.setItem('gt-me', String(id)); else localStorage.removeItem('gt-me'); } catch (_) { /* private mode */ } };
+    // Android back (MainActivity asks this before going back a screen): close a full-screen player first
+    window.__gtBack = () => {
+        if (document.fullscreenElement) { document.exitFullscreen().catch(() => {}); return 'handled'; }
+        const fs = document.querySelector('.w-watch.w-fs');
+        if (fs) { fs.classList.remove('w-fs', 'w-hide'); try { screen.orientation.unlock(); } catch (_) { /* nothing locked */ } return 'handled'; }
+        return '';
+    };
+
     window.APP = {
+        me, setMe,
         checkUpdate, version: () => window.APP_VERSION || 'dev', downloadPage: DOWNLOAD_PAGE,
         esc, icon, url, seg, bindSeg, replaceLinks, seasons, seasonChips, seasonField, ctlBar, standingsRows, pageHead, photo, paginate,
         screen: (name, def) => { screens[name] = def; },

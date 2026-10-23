@@ -25,7 +25,7 @@ SOURCE = APP / "app"
 WWW = APP / "www"
 CACHE = APP / "vendor-cache"
 
-DATA_MODULES = ["league-db.js", "data.js", "players.js", "analytics.js", "roster-metrics.js", "watch.js", "nflplus.js", "live-fantasy.js", "watch-matchup.js"]
+DATA_MODULES = ["league-db.js", "data.js", "players.js", "analytics.js", "roster-metrics.js", "watch.js", "nflplus.js", "live-fantasy.js", "watch-matchup.js", "fp-ticker.js"]
 ASSETS = ["logos/logo_2.png", "manager-logos", "nfl-logos", "icons/dci-logos"]
 SQL_JS = "https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.13.0/sql-wasm.js"
 SQL_WASM = "https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.13.0/sql-wasm.wasm"
